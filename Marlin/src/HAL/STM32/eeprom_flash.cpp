@@ -263,5 +263,80 @@ bool PersistentStore::read_data(int &pos, uint8_t *value, size_t size, uint16_t 
   return false;
 }
 
+uint32_t PersistentStore::FLASH_If_Erase(uint32_t addr_start, uint32_t addr_end) {
+
+    uint32_t NbrOfPages = 0;
+    uint32_t PageError = 0;
+    FLASH_EraseInitTypeDef pEraseInit;
+    HAL_StatusTypeDef status = HAL_OK;
+      
+    if(addr_start < FLASH_OUTAGE_DATA_ADDR || addr_end > (FLASH_OUTAGE_DATA_ADDR + FLASH_OUTAGE_DATA_SIZE)) {
+      return FLASHIF_ERASEKO;
+    }
+  
+    /* Unlock the Flash to enable the flash control register access *************/ 
+    HAL_FLASH_Unlock();
+  
+    /* Get the sector where start the user flash area */
+      NbrOfPages = ((addr_end + 1) - addr_start)/FLASH_PAGE_SIZE + 1; // must > 1
+      pEraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
+      pEraseInit.PageAddress = addr_start;
+      pEraseInit.Banks = FLASH_BANK_1;
+      pEraseInit.NbPages = NbrOfPages;
+      status = HAL_FLASHEx_Erase(&pEraseInit, &PageError);
+  
+    /* Lock the Flash to disable the flash control register access (recommended
+       to protect the FLASH memory against possible unwanted operation) *********/
+    HAL_FLASH_Lock();
+  
+    if (status != HAL_OK)
+    {
+      /* Error occurred while page erase */
+      return FLASHIF_ERASEKO;
+    }
+  
+    return FLASHIF_OK;
+}
+
+uint32_t PersistentStore::FLASH_If_Write(uint32_t destination, uint32_t *p_source, uint32_t length) {
+
+  uint32_t i = 0;
+
+  /* Unlock the Flash to enable the flash control register access *************/
+  HAL_FLASH_Unlock();
+
+  for (i = 0; (i < length) && (destination <= (FLASH_OUTAGE_DATA_ADDR+FLASH_OUTAGE_DATA_SIZE-4)); i++)
+  {
+    /* Device voltage range supposed to be [2.7V to 3.6V], the operation will
+       be done by word */ 
+    if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_WORD, destination, *(uint32_t*)(p_source+i)) == HAL_OK)      
+    {
+     /* Check the written value */
+      if (*(uint32_t*)destination != *(uint32_t*)(p_source+i))
+      {
+        /* Flash content doesn't match SRAM content */
+        HAL_FLASH_Lock();
+        return(FLASHIF_WRITINGCTRL_ERROR);
+      }
+      /* Increment FLASH destination address */
+      destination += 4;
+    }
+    else
+    {
+      /* Error occurred while writing data in Flash memory */
+      HAL_FLASH_Lock();
+      return (FLASHIF_WRITING_ERROR);
+    }
+  }
+
+  /* Lock the Flash to disable the flash control register access (recommended
+     to protect the FLASH memory against possible unwanted operation) *********/
+  HAL_FLASH_Lock();
+
+  return (FLASHIF_OK);
+}
+
+
+
 #endif // FLASH_EEPROM_EMULATION
 #endif // ARDUINO_ARCH_STM32 && !STM32GENERIC

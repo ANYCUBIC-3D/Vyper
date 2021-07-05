@@ -128,7 +128,7 @@
     Init.ClockPowerSave      = hsd.Init.ClockPowerSave;
     Init.BusWide             = hsd.Init.BusWide;
     Init.HardwareFlowControl = hsd.Init.HardwareFlowControl;
-    Init.ClockDiv            = clock_to_divider(SDIO_CLOCK);
+    Init.ClockDiv            = 0x10; // clock_to_divider(SDIO_CLOCK); // 2
 
     /* Initialize SDIO peripheral interface with default configuration */
     SDIO_Init(hsd.Instance, Init);
@@ -144,7 +144,7 @@
     GPIO_InitTypeDef  GPIO_InitStruct;
 
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = 1;  //GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 
     #if DISABLED(STM32F1xx)
@@ -174,17 +174,13 @@
     //Initialize the SDIO (with initial <400Khz Clock)
     tempreg = 0;  //Reset value
     tempreg |= SDIO_CLKCR_CLKEN;  // Clock enabled
-    tempreg |= SDIO_INIT_CLK_DIV; // Clock Divider. Clock = 48000 / (118 + 2) = 400Khz
+    tempreg |= (uint32_t)0x76; // Clock Divider. Clock = 48000 / (118 + 2) = 400Khz
     // Keep the rest at 0 => HW_Flow Disabled, Rising Clock Edge, Disable CLK ByPass, Bus Width = 0, Power save Disable
     SDIO->CLKCR = tempreg;
 
     // Power up the SDIO
-    SDIO_PowerState_ON(SDIO);
-  }
+    SDIO->POWER = 0x03;
 
-  void HAL_SD_MspInit(SD_HandleTypeDef *hsd) { // application specific init
-    UNUSED(hsd);   // Prevent unused argument(s) compilation warning
-    __HAL_RCC_SDIO_CLK_ENABLE();  // turn on SDIO clock
   }
 
   bool SDIO_Init() {
@@ -193,10 +189,17 @@
     bool status;
     hsd.Instance = SDIO;
     hsd.State = HAL_SD_STATE_RESET;
+    hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
+    hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
+    hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
+    hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
+    hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
+    hsd.Init.ClockDiv = SDIO_TRANSFER_CLK_DIV;
 
     SD_LowLevel_Init();
 
     uint8_t retry_Cnt = retryCnt;
+
     for (;;) {
       TERN_(USE_WATCHDOG, HAL_watchdog_refresh());
       status = (bool) HAL_SD_Init(&hsd);
@@ -265,16 +268,33 @@
   bool SDIO_ReadBlock(uint32_t block, uint8_t *dst) {
     hsd.Instance = SDIO;
     uint8_t retryCnt = SDIO_READ_RETRIES;
+    HAL_StatusTypeDef res;
+    HAL_SD_CardStateTypeDef card_sta;
 
+    uint32_t time_start = millis();
     bool status;
+
+    res = HAL_SD_ReadBlocks(&hsd, (uint8_t*)dst, block, 1, 0xffffff);  // read one 512 byte block with 500mS timeout
+
     for (;;) {
       TERN_(USE_WATCHDOG, HAL_watchdog_refresh());
-      status = (bool) HAL_SD_ReadBlocks(&hsd, (uint8_t*)dst, block, 1, 1000);  // read one 512 byte block with 500mS timeout
-      status |= (bool) HAL_SD_GetCardState(&hsd);     // make sure all is OK
+
+      card_sta = HAL_SD_GetCardState(&hsd);     // make sure all is OK
+
+      if(HAL_SD_CARD_TRANSFER == card_sta) {   // make sure all is OK
+        status = 0;
+      } else {
+        status = 1;
+      }
+
       if (!status) break;       // return passing status
-      if (!--retryCnt) break;   // return failing status if retries are exhausted
+//      if (!--retryCnt) break;   // return failing status if retries are exhausted
+      if(millis() - time_start > 500) { // wait 500ms to finish
+        break;
+      }
     }
-    return status;
+
+    return (status==0);
 
     /*
     return (bool) ((status_read | status_card) ? 1 : 0);
@@ -307,21 +327,54 @@
     }
     SDIO_CLEAR_FLAG(SDIO_ICR_CMD_FLAGS | SDIO_ICR_DATA_FLAGS);
     */
-
-    return true;
   }
 
   bool SDIO_WriteBlock(uint32_t block, const uint8_t *src) {
     hsd.Instance = SDIO;
     uint8_t retryCnt = SDIO_READ_RETRIES;
     bool status;
+    HAL_StatusTypeDef res;
+    HAL_SD_CardStateTypeDef card_sta;
+
+//    __disable_irq();
+    res = HAL_SD_WriteBlocks(&hsd, (uint8_t*)src, block, 1, 0xffffff);  // write one 512 byte block with 500mS timeout
+//    __enable_irq();
+
+#if SD_DEBUG_WRITE
+    SERIAL_ECHOLNPAIR("block: ", block);
+    SERIAL_ECHOLNPAIR("HAL_SD_WriteBlocks res: ", res);
+#endif
+
+    uint32_t time_start = millis();
+
     for (;;) {
-      status = (bool) HAL_SD_WriteBlocks(&hsd, (uint8_t*)src, block, 1, 500);  // write one 512 byte block with 500mS timeout
-      status |= (bool) HAL_SD_GetCardState(&hsd);     // make sure all is OK
+      TERN_(USE_WATCHDOG, HAL_watchdog_refresh());
+//      __disable_irq();
+      card_sta = HAL_SD_GetCardState(&hsd);
+//      __enable_irq();
+
+#if SD_DEBUG_WRITE
+      SERIAL_ECHOLNPAIR("HAL_SD_GetCardState: ", card_sta);
+#endif
+
+      if(HAL_SD_CARD_TRANSFER == card_sta) {     // make sure all is OK
+        status = 0;
+      } else {
+        status = 1;
+      }
+
       if (!status) break;       // return passing status
-      if (!--retryCnt) break;   // return failing status if retries are exhausted
+      if(millis() - time_start > 500) { // wait 500ms to finish
+        break;
+      }
+//      if (!--retryCnt) break;   // return failing status if retries are exhausted
     }
-    return status;
+
+#if SD_DEBUG_WRITE
+    SERIAL_ECHOLNPAIR("SDIO_WriteBlock status: ", status);
+#endif
+
+    return (status==0);
   }
 
 #endif // !USBD_USE_CDC_COMPOSITE

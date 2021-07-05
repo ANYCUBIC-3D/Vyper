@@ -29,7 +29,12 @@
 #if ENABLED(POWER_LOSS_RECOVERY)
 
 #include "powerloss.h"
+#include "power_monitor.h"
 #include "../core/macros.h"
+#include "../module/stepper/indirection.h"
+#include "../module/stepper/indirection.h"
+#include "../HAL/shared/eeprom_api.h"
+
 
 bool PrintJobRecovery::enabled; // Initialized by settings.load()
 
@@ -58,6 +63,9 @@ uint32_t PrintJobRecovery::cmd_sdpos, // = 0
   #include "fwretract.h"
 #endif
 
+#if ENABLED(EXTENSIBLE_UI)
+  #include "../lcd/extui/ui_api.h"
+#endif
 #define DEBUG_OUT ENABLED(DEBUG_POWER_LOSS_RECOVERY)
 #include "../core/debug_out.h"
 
@@ -120,20 +128,45 @@ void PrintJobRecovery::check() {
  * Delete the recovery file and clear the recovery data
  */
 void PrintJobRecovery::purge() {
-  init();
+#if 0
   card.removeJobRecoveryFile();
+#endif
+
+  if(info.valid_head != 0xFF || info.valid_foot != 0xFF) {
+//      SERIAL_ECHOLNPAIR("line: ", __LINE__);
+//      SERIAL_ECHOLNPAIR("flash e s: ", millis());
+    if(persistentStore.FLASH_If_Erase(FLASH_OUTAGE_DATA_ADDR, FLASH_OUTAGE_DATA_ADDR+0x400) != FLASHIF_OK) {
+//      SERIAL_ECHOLNPAIR("flash erase failed: ", __LINE__);
+    }
+//    SERIAL_ECHOLNPAIR("flash e e: ", millis());
+  }
+
+  memset(&info, 0, sizeof(info));   // init();
 }
 
 /**
  * Load the recovery data, if it exists
  */
 void PrintJobRecovery::load() {
+#if 0
   if (exists()) {
     open(true);
     (void)file.read(&info, sizeof(info));
     close();
   }
   debug(PSTR("Load"));
+#endif
+
+  memcpy(&info, (uint8_t *)(FLASH_OUTAGE_DATA_ADDR), FLASH_OUTAGE_DATA_NUMBER);
+
+#if 0
+  SERIAL_ECHOLNPAIR("info.valid_head: ", info.valid_head);
+  SERIAL_ECHOLNPAIR("info.sd_filename: ", info.sd_filename);
+  SERIAL_ECHOLNPAIR("info.valid_foot: ", info.valid_foot);
+  SERIAL_ECHOLNPAIR("info.info.flag.dryrun: ", info.flag.dryrun);
+  SERIAL_ECHOLNPAIR("info.info.flag.allow_cold_extrusion: ", info.flag.allow_cold_extrusion);
+  SERIAL_ECHOLNPAIR("info.info.flag.leveling: ", info.flag.leveling);
+#endif
 }
 
 /**
@@ -237,6 +270,43 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=0*/
 }
 
 #if PIN_EXISTS(POWER_LOSS)
+    extern uint32_t AD_DMA[3];
+
+    void PrintJobRecovery::outage() {
+      static uint8_t cnt = 0;
+      static uint32_t ad_dma_last = 0;
+
+      if(!enabled) {
+        return ;
+      }
+
+      if(AD_DMA[2] < 2600) {
+
+//        SERIAL_ECHOLNPAIR("v:", AD_DMA[2]);
+
+        if(cnt >= 3) {
+            _outage();
+        }
+
+        if(AD_DMA[2] < ad_dma_last) {
+            cnt++;
+        }
+
+      } else {
+
+        if(cnt != 0) {
+            cnt = 0;
+        }
+      }
+
+      ad_dma_last = AD_DMA[2];
+    }
+
+    void PrintJobRecovery::adc_raw() {
+        SERIAL_ECHOLNPAIR("AD_DMA[0]: ", AD_DMA[0]);
+        SERIAL_ECHOLNPAIR("AD_DMA[1]: ", AD_DMA[1]);
+        SERIAL_ECHOLNPAIR("AD_DMA[2]: ", AD_DMA[2]);
+    }
 
   #if ENABLED(BACKUP_POWER_SUPPLY)
 
@@ -283,6 +353,9 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=0*/
       lock = true;
     #endif
 
+//    TERN_(USE_WATCHDOG, HAL_watchdog_refresh());
+//    __disable_irq();
+
     #if POWER_LOSS_ZRAISE
       // Get the limited Z-raise to do now or on resume
       const float zraise = _MAX(0, _MIN(current_position.z + POWER_LOSS_ZRAISE, Z_MAX_POS - 1) - current_position.z);
@@ -290,6 +363,28 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=0*/
       constexpr float zraise = 0;
     #endif
 
+    WRITE(HEATER_0_PIN, 0);
+    WRITE(HEATER_BED_PIN, 0);
+    ExtUI::onPowerLoss();
+    WRITE(X_ENABLE_PIN, 1);
+    WRITE(Y_ENABLE_PIN, 1);
+    WRITE(Z_ENABLE_PIN, 1);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_15, GPIO_PIN_SET);
+//    DISABLE_STEPPER_X();
+//    DISABLE_STEPPER_Y();
+//    DISABLE_STEPPER_Z();    // Z1
+//    DISABLE_STEPPER_E0();
+//    DISABLE_STEPPER_E1();   // Z2
+// shutdown fan
+//    WRITE(FAN_PIN, 0);      // FAN0
+//    WRITE(FAN1_PIN, 0);     // FAN1
+//    WRITE(PB1, 0);          // FAN2
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_14, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+// shutdown led
+    WRITE(CASE_LIGHT_PIN, 0);
     // Save, including the limited Z raise
     if (IS_SD_PRINTING()) save(true, zraise);
 
@@ -313,13 +408,23 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=0*/
  */
 void PrintJobRecovery::write() {
 
-  debug(PSTR("Write"));
+//  debug(PSTR("Write"));
 
+#if 0
   open(false);
   file.seekSet(0);
   const int16_t ret = file.write(&info, sizeof(info));
   if (ret == -1) DEBUG_ECHOLNPGM("Power-loss file write failed.");
   if (!file.close()) DEBUG_ECHOLNPGM("Power-loss file close failed.");
+#endif
+
+  if(persistentStore.FLASH_If_Erase(FLASH_OUTAGE_DATA_ADDR, FLASH_OUTAGE_DATA_ADDR+0x400) != FLASHIF_OK) {
+    return;
+  }
+
+  uint32_t *p_buf = (uint32_t *)&info;
+  if(persistentStore.FLASH_If_Write(FLASH_OUTAGE_DATA_ADDR, p_buf, FLASH_OUTAGE_DATA_NUMBER) != FLASHIF_OK) {
+  }
 }
 
 /**
@@ -383,9 +488,10 @@ void PrintJobRecovery::resume() {
 
     // Home safely with no Z raise
     gcode.process_subcommands_now_P(PSTR(
-      "G28R0"                               // No raise during G28
+//      "G28R0"                               // No raise during G28
+      "G28"                                   // raise
       #if IS_CARTESIAN && DISABLED(POWER_LOSS_RECOVER_ZHOME)
-        "XY"                                // Don't home Z on Cartesian unless overridden
+//        "XY"                                // Don't home Z on Cartesian unless overridden
       #endif
     ));
 
@@ -446,6 +552,8 @@ void PrintJobRecovery::resume() {
     }
     fwretract.current_hop = info.retract_hop;
   #endif
+  sprintf_P(cmd, PSTR("G1 F500 Z%s"), dtostrf(info.current_position.z + 5, 1, 3, str_1));
+  gcode.process_subcommands_now(cmd);
 
   #if HAS_LEVELING
     // Restore leveling state before 'G92 Z' to ensure
@@ -487,8 +595,9 @@ void PrintJobRecovery::resume() {
   #if Z_HOME_DIR > 0 || ENABLED(POWER_LOSS_RECOVER_ZHOME)
     sprintf_P(cmd, PSTR("G1 Z%s F200"), str_1);
   #else
-    gcode.process_subcommands_now_P(PSTR("G1 Z0 F200"));
-    sprintf_P(cmd, PSTR("G92.9 Z%s"), str_1);
+//    gcode.process_subcommands_now_P(PSTR("G1 Z0 F200"));
+//    sprintf_P(cmd, PSTR("G92.9 Z%s"), str_1);
+  sprintf_P(cmd, PSTR("G1 Z%s F200"), str_1);
   #endif
   gcode.process_subcommands_now(cmd);
 

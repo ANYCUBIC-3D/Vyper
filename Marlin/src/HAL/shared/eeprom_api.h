@@ -27,6 +27,19 @@
 
 #include "../../libs/crc16.h"
 
+#define FLASH_OUTAGE_DATA_ADDR  0x0807F000
+#define FLASH_OUTAGE_DATA_SIZE  0x400
+#define FLASH_OUTAGE_DATA_NUMBER 192
+
+enum 
+{
+  FLASHIF_OK = 0,
+  FLASHIF_ERASEKO,
+  FLASHIF_WRITINGCTRL_ERROR,
+  FLASHIF_WRITING_ERROR,
+  FLASHIF_PROTECTION_ERRROR
+};
+
 class PersistentStore {
 public:
 
@@ -66,6 +79,10 @@ public:
     uint16_t crc = 0;
     return read_data(data_pos, value, size, &crc);
   }
+
+  static uint32_t FLASH_If_Erase(uint32_t addr_start, uint32_t addr_end);
+
+  static uint32_t FLASH_If_Write(uint32_t destination, uint32_t *p_source, uint32_t length);
 };
 
 extern PersistentStore persistentStore;

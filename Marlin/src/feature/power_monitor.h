@@ -23,9 +23,9 @@
 
 #include "../inc/MarlinConfig.h"
 
-#define PM_SAMPLE_RANGE 1024
-#define PM_K_VALUE      6
-#define PM_K_SCALE      6
+#define PM_SAMPLE_RANGE 4096
+#define PM_K_VALUE      0
+#define PM_K_SCALE      0
 
 template <const float & SCALE, int K_VALUE, int K_SCALE>
 struct pm_lpf_t {

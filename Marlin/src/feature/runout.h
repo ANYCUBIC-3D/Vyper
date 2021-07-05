@@ -43,7 +43,7 @@
 
 //#define FILAMENT_RUNOUT_SENSOR_DEBUG
 #ifndef FILAMENT_RUNOUT_THRESHOLD
-  #define FILAMENT_RUNOUT_THRESHOLD 5
+  #define FILAMENT_RUNOUT_THRESHOLD 1000
 #endif
 
 void event_filament_runout();
@@ -361,8 +361,8 @@ class FilamentSensorBase {
 
   class RunoutResponseDebounced {
     private:
-      static constexpr int8_t runout_threshold = FILAMENT_RUNOUT_THRESHOLD;
-      static int8_t runout_count;
+      static constexpr int16_t runout_threshold = FILAMENT_RUNOUT_THRESHOLD;
+      static int16_t runout_count;
     public:
       static inline void reset()                                  { runout_count = runout_threshold; }
       static inline void run()                                    { if (runout_count >= 0) runout_count--; }

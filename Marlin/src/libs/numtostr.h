@@ -35,6 +35,8 @@ const char* ui8tostr2(const uint8_t x);
 // Convert uint8_t to string with 123 format
 const char* ui8tostr3rj(const uint8_t i);
 
+const char* utostr3(const uint16_t x);
+
 // Convert int8_t to string with 123 format
 const char* i8tostr3rj(const int8_t x);
 
@@ -63,6 +65,8 @@ const char* i16tostr4signrj(const int16_t x);
 
 // Convert unsigned float to string with 1.23 format
 const char* ftostr12ns(const float &x);
+
+char *ftostr(const float x);
 
 // Convert unsigned float to string with 12.3 format
 const char* ftostr31ns(const float &x);

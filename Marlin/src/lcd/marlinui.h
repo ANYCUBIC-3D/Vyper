@@ -296,6 +296,7 @@ public:
   #if HAS_DISPLAY
 
     static void init();
+    static void param_init();
     static void update();
 
     static void abort_print();
@@ -514,6 +515,11 @@ public:
       static inline void eeprom_alert_index()   { eeprom_alert(1); }
       static inline void eeprom_alert_version() { eeprom_alert(2); }
     #endif
+  #endif
+
+  #if ENABLED(PREHEAT_BEFORE_LEVELING)
+    static void probe_preheating_start();
+    static void probe_preheating_stop();
   #endif
 
   //

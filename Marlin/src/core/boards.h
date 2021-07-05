@@ -402,6 +402,7 @@
 //
 // Custom board
 //
+#define BOARD_AC_TRI_F1_V1            6200  // Anycubic trigorilla F103 board
 
 #define BOARD_CUSTOM                  9998  // Custom pins definition for development and/or rare boards
 

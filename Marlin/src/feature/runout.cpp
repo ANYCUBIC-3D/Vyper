@@ -52,7 +52,7 @@ bool FilamentMonitorBase::enabled = true,
     uint8_t FilamentSensorEncoder::motion_detected;
   #endif
 #else
-  int8_t RunoutResponseDebounced::runout_count; // = 0
+  int16_t RunoutResponseDebounced::runout_count; // = 0
 #endif
 
 //
@@ -127,8 +127,10 @@ void event_filament_runout() {
     SERIAL_EOL();
   #endif // HOST_ACTION_COMMANDS
 
+#if 0
   if (run_runout_script)
     queue.inject_P(PSTR(FILAMENT_RUNOUT_SCRIPT));
+#endif
 }
 
 #endif // HAS_FILAMENT_SENSOR

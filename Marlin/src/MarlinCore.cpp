@@ -251,6 +251,7 @@ MarlinState marlin_state = MF_INITIALIZING;
 // For M109 and M190, this flag may be cleared (by M108) to exit the wait loop
 bool wait_for_heatup = true;
 
+
 // For M0/M1, this flag may be cleared (by M108) to exit the wait-for-user loop
 #if HAS_RESUME_CONTINUE
   bool wait_for_user; // = false;
@@ -954,17 +955,17 @@ inline void tmc_standby_setup() {
  *  - Print startup messages and diagnostics
  *  - Get EEPROM or default settings
  *  - Initialize managers for:
- *    â€¢ temperature
- *    â€¢ planner
- *    â€¢ watchdog
- *    â€¢ stepper
- *    â€¢ photo pin
- *    â€¢ servos
- *    â€¢ LCD controller
- *    â€¢ Digipot I2C
- *    â€¢ Z probe sled
- *    â€¢ status LEDs
- *    â€¢ Max7219
+ *    â€?temperature
+ *    â€?planner
+ *    â€?watchdog
+ *    â€?stepper
+ *    â€?photo pin
+ *    â€?servos
+ *    â€?LCD controller
+ *    â€?Digipot I2C
+ *    â€?Z probe sled
+ *    â€?status LEDs
+ *    â€?Max7219
  */
 void setup() {
 
@@ -1131,6 +1132,7 @@ void setup() {
 
   SETUP_RUN(settings.first_load());   // Load data from EEPROM if available (or use defaults)
                                       // This also updates variables in the planner, elsewhere
+  SETUP_RUN(ui.param_init());
 
   #if HAS_ETHERNET
     SETUP_RUN(ethernet.init());

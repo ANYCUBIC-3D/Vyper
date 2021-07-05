@@ -1811,61 +1811,61 @@ void Temperature::init() {
   HAL_adc_init();
 
   #if HAS_TEMP_ADC_0
-    HAL_ANALOG_SELECT(TEMP_0_PIN);
+    // HAL_ANALOG_SELECT(TEMP_0_PIN);
   #endif
   #if HAS_TEMP_ADC_1
-    HAL_ANALOG_SELECT(TEMP_1_PIN);
+    // HAL_ANALOG_SELECT(TEMP_1_PIN);
   #endif
   #if HAS_TEMP_ADC_2
-    HAL_ANALOG_SELECT(TEMP_2_PIN);
+    // HAL_ANALOG_SELECT(TEMP_2_PIN);
   #endif
   #if HAS_TEMP_ADC_3
-    HAL_ANALOG_SELECT(TEMP_3_PIN);
+    // HAL_ANALOG_SELECT(TEMP_3_PIN);
   #endif
   #if HAS_TEMP_ADC_4
-    HAL_ANALOG_SELECT(TEMP_4_PIN);
+    // HAL_ANALOG_SELECT(TEMP_4_PIN);
   #endif
   #if HAS_TEMP_ADC_5
-    HAL_ANALOG_SELECT(TEMP_5_PIN);
+    // HAL_ANALOG_SELECT(TEMP_5_PIN);
   #endif
   #if HAS_TEMP_ADC_6
-    HAL_ANALOG_SELECT(TEMP_6_PIN);
+    // HAL_ANALOG_SELECT(TEMP_6_PIN);
   #endif
   #if HAS_TEMP_ADC_7
-    HAL_ANALOG_SELECT(TEMP_7_PIN);
+    // HAL_ANALOG_SELECT(TEMP_7_PIN);
   #endif
   #if HAS_JOY_ADC_X
-    HAL_ANALOG_SELECT(JOY_X_PIN);
+    // HAL_ANALOG_SELECT(JOY_X_PIN);
   #endif
   #if HAS_JOY_ADC_Y
-    HAL_ANALOG_SELECT(JOY_Y_PIN);
+    // HAL_ANALOG_SELECT(JOY_Y_PIN);
   #endif
   #if HAS_JOY_ADC_Z
-    HAL_ANALOG_SELECT(JOY_Z_PIN);
+    // HAL_ANALOG_SELECT(JOY_Z_PIN);
   #endif
   #if HAS_JOY_ADC_EN
     SET_INPUT_PULLUP(JOY_EN_PIN);
   #endif
   #if HAS_TEMP_ADC_BED
-    HAL_ANALOG_SELECT(TEMP_BED_PIN);
+    // HAL_ANALOG_SELECT(TEMP_BED_PIN);
   #endif
   #if HAS_TEMP_ADC_CHAMBER
-    HAL_ANALOG_SELECT(TEMP_CHAMBER_PIN);
+    // HAL_ANALOG_SELECT(TEMP_CHAMBER_PIN);
   #endif
   #if HAS_TEMP_ADC_PROBE
-    HAL_ANALOG_SELECT(TEMP_PROBE_PIN);
+    // HAL_ANALOG_SELECT(TEMP_PROBE_PIN);
   #endif
   #if ENABLED(FILAMENT_WIDTH_SENSOR)
-    HAL_ANALOG_SELECT(FILWIDTH_PIN);
+    // HAL_ANALOG_SELECT(FILWIDTH_PIN);
   #endif
   #if HAS_ADC_BUTTONS
-    HAL_ANALOG_SELECT(ADC_KEYPAD_PIN);
+    // HAL_ANALOG_SELECT(ADC_KEYPAD_PIN);
   #endif
   #if ENABLED(POWER_MONITOR_CURRENT)
-    HAL_ANALOG_SELECT(POWER_MONITOR_CURRENT_PIN);
+    // HAL_ANALOG_SELECT(POWER_MONITOR_CURRENT_PIN);
   #endif
   #if ENABLED(POWER_MONITOR_VOLTAGE)
-    HAL_ANALOG_SELECT(POWER_MONITOR_VOLTAGE_PIN);
+    // HAL_ANALOG_SELECT(POWER_MONITOR_VOLTAGE_PIN);
   #endif
 
   HAL_timer_start(TEMP_TIMER_NUM, TEMP_TIMER_FREQUENCY);
@@ -2793,11 +2793,13 @@ void Temperature::tick() {
    *
    * This gives each ADC 0.9765ms to charge up.
    */
-  #define ACCUMULATE_ADC(obj) do{ \
-    if (!HAL_ADC_READY()) next_sensor_state = adc_sensor_state; \
-    else obj.sample(HAL_READ_ADC()); \
-  }while(0)
+   #define ACCUMULATE_ADC(obj) obj.sample(1000)
+//  #define ACCUMULATE_ADC(obj) do{ \
+//    if (!HAL_ADC_READY()) next_sensor_state = adc_sensor_state; \
+//    else obj.sample(HAL_READ_ADC()); \
+//  }while(0)
 
+  extern uint32_t AD_DMA[3];
   ADCSensorState next_sensor_state = adc_sensor_state < SensorsReady ? (ADCSensorState)(int(adc_sensor_state) + 1) : StartSampling;
 
   switch (adc_sensor_state) {
@@ -2828,12 +2830,12 @@ void Temperature::tick() {
 
     #if HAS_TEMP_ADC_0
       case PrepareTemp_0: HAL_START_ADC(TEMP_0_PIN); break;
-      case MeasureTemp_0: ACCUMULATE_ADC(temp_hotend[0]); break;
+      case MeasureTemp_0: temp_hotend[0].sample(AD_DMA[0]); break;
     #endif
 
     #if HAS_TEMP_ADC_BED
       case PrepareTemp_BED: HAL_START_ADC(TEMP_BED_PIN); break;
-      case MeasureTemp_BED: ACCUMULATE_ADC(temp_bed); break;
+      case MeasureTemp_BED: temp_bed.sample(AD_DMA[1]); break;
     #endif
 
     #if HAS_TEMP_ADC_CHAMBER
@@ -2905,7 +2907,7 @@ void Temperature::tick() {
         break;
       case Measure_POWER_MONITOR_VOLTAGE:
         if (!HAL_ADC_READY()) next_sensor_state = adc_sensor_state; // Redo this state
-        else power_monitor.add_voltage_sample(HAL_READ_ADC());
+        else power_monitor.add_voltage_sample(AD_DMA[2]);
         break;
     #endif
 

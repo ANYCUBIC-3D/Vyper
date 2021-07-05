@@ -347,10 +347,14 @@ FORCE_INLINE void probe_specific_action(const bool deploy) {
     if (bedPreheat) DEBUG_ECHOPAIR("bed (", bedPreheat, ") ");
     DEBUG_EOL();
 
+    ui.probe_preheating_start();
+
     TERN_(WAIT_FOR_NOZZLE_HEAT, if (hotendPreheat) thermalManager.setTargetHotend(hotendPreheat, 0));
     TERN_(WAIT_FOR_BED_HEAT,    if (bedPreheat)    thermalManager.setTargetBed(bedPreheat));
     TERN_(WAIT_FOR_NOZZLE_HEAT, if (hotendPreheat) thermalManager.wait_for_hotend(0));
     TERN_(WAIT_FOR_BED_HEAT,    if (bedPreheat)    thermalManager.wait_for_bed_heating());
+
+    ui.probe_preheating_stop();
   }
 
 #endif
@@ -450,6 +454,11 @@ bool Probe::set_deployed(const bool deploy) {
  */
 bool Probe::probe_down_to_z(const float z, const feedRate_t fr_mm_s) {
   DEBUG_SECTION(log_probe, "Probe::probe_down_to_z", DEBUGGING(LEVELING));
+
+  OUT_WRITE(AUTO_LEVEL_TX_PIN, LOW);
+  delay(300);
+  OUT_WRITE(AUTO_LEVEL_TX_PIN, HIGH);
+  delay(100);
 
   #if BOTH(HAS_HEATED_BED, WAIT_FOR_BED_HEATER)
     thermalManager.wait_for_bed_heating();

@@ -58,6 +58,8 @@ namespace ExtUI {
   enum heater_t   : uint8_t { H0, H1, H2, H3, H4, H5, BED, CHAMBER };
   enum fan_t      : uint8_t { FAN0, FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FAN7 };
   enum result_t   : uint8_t { PID_BAD_EXTRUDER_NUM, PID_TEMP_TOO_HIGH, PID_TUNING_TIMEOUT, PID_DONE };
+  enum language_t : uint8_t { ENG, CHS };
+  enum audio_t    : uint8_t { ON, OFF };
 
   constexpr uint8_t extruderCount = EXTRUDERS;
   constexpr uint8_t hotendCount   = HOTENDS;
@@ -128,7 +130,7 @@ namespace ExtUI {
   float getPrintingAcceleration_mm_s2();
   float getRetractAcceleration_mm_s2();
   float getTravelAcceleration_mm_s2();
-  float getFeedrate_percent();
+  int16_t getFeedrate_percent();
   int16_t getFlowPercentage(const extruder_t);
 
   inline uint8_t getProgress_percent() { return ui.get_progress_percent(); }
@@ -348,6 +350,7 @@ namespace ExtUI {
    * Should be declared by EXTENSIBLE_UI and will be called by Marlin
    */
   void onStartup();
+  void onParamInit();
   void onIdle();
   void onMediaInserted();
   void onMediaError();
@@ -373,6 +376,7 @@ namespace ExtUI {
   void onConfigurationStoreWritten(bool success);
   void onConfigurationStoreRead(bool success);
   #if ENABLED(POWER_LOSS_RECOVERY)
+    void onPowerLoss();
     void onPowerLossResume();
   #endif
   #if HAS_PID_HEATING

@@ -844,7 +844,7 @@ namespace ExtUI {
     }
   #endif
 
-  float getFeedrate_percent() { return feedrate_percentage; }
+  int16_t getFeedrate_percent() { return feedrate_percentage; }
 
   #if ENABLED(PIDTEMP)
     float getPIDValues_Kp(const extruder_t tool) { return PID_PARAM(Kp, tool); }
@@ -1061,6 +1061,7 @@ namespace ExtUI {
 
 void MarlinUI::init() { ExtUI::onStartup(); }
 
+void MarlinUI::param_init() { ExtUI::onParamInit(); }
 void MarlinUI::update() { ExtUI::onIdle(); }
 
 void MarlinUI::kill_screen(PGM_P const error, PGM_P const component) {

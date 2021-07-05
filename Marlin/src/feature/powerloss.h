@@ -34,6 +34,8 @@
   #include "../feature/repeat.h"
 #endif
 
+#include "../feature/power_monitor.h"
+
 #if ENABLED(MIXING_EXTRUDER)
   #include "../feature/mixing.h"
 #endif
@@ -42,7 +44,7 @@
   #define POWER_LOSS_STATE HIGH
 #endif
 
-//#define DEBUG_POWER_LOSS_RECOVERY
+#define DEBUG_POWER_LOSS_RECOVERY
 //#define SAVE_EACH_CMD_MODE
 //#define SAVE_INFO_INTERVAL_MS 0
 
@@ -125,7 +127,7 @@ class PrintJobRecovery {
     static void prepare();
 
     static inline void setup() {
-      #if PIN_EXISTS(POWER_LOSS)
+      #if 0 // PIN_EXISTS(POWER_LOSS) // use DMA here
         #if ENABLED(POWER_LOSS_PULLUP)
           SET_INPUT_PULLUP(POWER_LOSS_PIN);
         #elif ENABLED(POWER_LOSS_PULLDOWN)
@@ -158,10 +160,8 @@ class PrintJobRecovery {
     static void save(const bool force=ENABLED(SAVE_EACH_CMD_MODE), const float zraise=0);
 
     #if PIN_EXISTS(POWER_LOSS)
-      static inline void outage() {
-        if (enabled && READ(POWER_LOSS_PIN) == POWER_LOSS_STATE)
-          _outage();
-      }
+      static void outage();
+      static void adc_raw();
     #endif
 
     // The referenced file exists

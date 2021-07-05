@@ -497,7 +497,7 @@ void wait_for_confirmation(const bool is_reload/*=false*/, const int8_t max_beep
   // Start the heater idle timers
   const millis_t nozzle_timeout = SEC_TO_MS(PAUSE_PARK_NOZZLE_TIMEOUT);
 
-  HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout);
+//  HOTEND_LOOP() thermalManager.heater_idle[e].start(nozzle_timeout);
 
   #if ENABLED(DUAL_X_CARRIAGE)
     const int8_t saved_ext        = active_extruder;
