@@ -99,4 +99,9 @@ void CaseLight::update(const bool sflag) {
   #endif // !CASE_LIGHT_USE_NEOPIXEL
 }
 
+void CaseLight::off() {
+  WRITE(CASE_LIGHT_PIN, LOW);
+}
+
+
 #endif // CASE_LIGHT_ENABLE

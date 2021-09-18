@@ -87,6 +87,7 @@
 Probe probe;
 
 xyz_pos_t Probe::offset; // Initialized by settings.load()
+int8_t Probe::status = 0;
 
 #if HAS_PROBE_XY_OFFSET
   const xy_pos_t &Probe::offset_xy = Probe::offset;
@@ -769,6 +770,7 @@ float Probe::probe_at_point(const float &rx, const float &ry, const ProbePtRaise
     stow();
     LCD_MESSAGEPGM(MSG_LCD_PROBING_FAILED);
     #if DISABLED(G29_RETRY_AND_RECOVER)
+      status = -1;
       SERIAL_ERROR_MSG(STR_ERR_PROBING_FAILED);
     #endif
   }

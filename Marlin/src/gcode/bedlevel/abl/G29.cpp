@@ -34,6 +34,8 @@
 #include "../../../module/planner.h"
 #include "../../../module/stepper.h"
 #include "../../../module/probe.h"
+#include "../../../module/temperature.h"
+
 #include "../../queue.h"
 
 #if ENABLED(PROBE_TEMP_COMPENSATION)
@@ -162,6 +164,8 @@
  *     There's no extra effect if you have a fixed Z probe.
  */
 G29_TYPE GcodeSuite::G29() {
+
+  probe.status = 0;
 
   reset_stepper_timeout();
 
@@ -885,8 +889,23 @@ G29_TYPE GcodeSuite::G29() {
 
   #ifdef Z_PROBE_END_SCRIPT
     if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPAIR("Z Probe End Script: ", Z_PROBE_END_SCRIPT);
-    planner.synchronize();
-    process_subcommands_now_P(PSTR(Z_PROBE_END_SCRIPT));
+
+    if(probe.status != -1) {
+      planner.synchronize();
+      process_subcommands_now_P(PSTR(Z_PROBE_END_SCRIPT));
+    } else {
+      thermalManager.setTargetHotend(0, 0);
+      thermalManager.setTargetBed(0);
+
+      thermalManager.set_fan_speed(0, 0);
+      thermalManager.set_fan_speed(1, 0);
+
+      wait_for_heatup = wait_for_user = false;
+
+      planner.clear_block_buffer();
+      queue.clear();
+    }
+
   #endif
 
   #if ENABLED(DWIN_CREALITY_LCD)

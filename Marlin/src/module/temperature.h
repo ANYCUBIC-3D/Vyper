@@ -300,6 +300,8 @@ class Temperature {
 
   public:
 
+    static volatile uint8_t killed;
+
     #if HAS_HOTEND
       #define HOTEND_TEMPS (HOTENDS + ENABLED(TEMP_SENSOR_1_AS_REDUNDANT))
       static hotend_info_t temp_hotend[HOTEND_TEMPS];
@@ -804,6 +806,7 @@ class Temperature {
     #endif
 
   private:
+
     static void update_raw_temperatures();
     static void updateTemperaturesFromRawValues();
 

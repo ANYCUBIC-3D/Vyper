@@ -33,7 +33,7 @@
 #include "../../../../inc/MarlinConfigPre.h"
 #include "../../ui_api.h"
 
-#define MAIN_BOARD_FIRMWARE_VER "V2.3.5"
+#define MAIN_BOARD_FIRMWARE_VER "V2.4.5"
 
 
 /****************** PAGE INDEX***********************/
@@ -84,6 +84,43 @@
 
 #define PAGE_CHS_PROBE_PREHEATING   (176+PAGE_OFFSET)
 #define PAGE_ENG_PROBE_PREHEATING   (175+PAGE_OFFSET)
+
+#define PAGE_CHS_HOMING                         (177+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_BED_HEATER            (178+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_BED_NTC               (179+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_HOTEND_HEATER         (180+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_HOTEND_NTC            (181+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_ENDSTOP               (182+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_X_ENDSTOP             (182+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_Y_ENDSTOP             (183+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_Z_ENDSTOP             (184+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_ZL_ENDSTOP            (185+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_ZR_ENDSTOP            (186+PAGE_OFFSET)
+#define PAGE_CHS_ABNORMAL_LEVELING_SENSOR       (187+PAGE_OFFSET)
+#define PAGE_CHS_LEVELING_FAILED                (188+PAGE_OFFSET)
+
+#define PAGE_ENG_HOMING                         (189+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_BED_HEATER            (190+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_BED_NTC               (191+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_HOTEND_HEATER         (192+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_HOTEND_NTC            (193+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_ENDSTOP               (194+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_X_ENDSTOP             (194+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_Y_ENDSTOP             (195+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_Z_ENDSTOP             (196+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_ZL_ENDSTOP            (197+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_ZR_ENDSTOP            (198+PAGE_OFFSET)
+#define PAGE_ENG_ABNORMAL_LEVELING_SENSOR       (199+PAGE_OFFSET)
+#define PAGE_ENG_LEVELING_FAILED                (200+PAGE_OFFSET)
+
+#define PAGE_CHS_PROBE_PRECHECK               (201+PAGE_OFFSET)
+#define PAGE_CHS_PROBE_PRECHECK_OK            (202+PAGE_OFFSET)
+#define PAGE_CHS_PROBE_PRECHECK_FAILED        (203+PAGE_OFFSET)
+
+#define PAGE_ENG_PROBE_PRECHECK               (204+PAGE_OFFSET)
+#define PAGE_ENG_PROBE_PRECHECK_OK            (205+PAGE_OFFSET)
+#define PAGE_ENG_PROBE_PRECHECK_FAILED        (206+PAGE_OFFSET)
+
 
 
 /****************** Lcd control **************************/
@@ -328,6 +365,7 @@ namespace Anycubic {
     static uint8_t          data_buf[64];
     static uint8_t          data_index;
     static uint32_t         page_index_last;
+    static uint32_t         page_index_last_2;
 	static uint8_t          message_index;
     static uint8_t          pop_up_index;
 	static uint32_t         key_index;
@@ -361,6 +399,8 @@ namespace Anycubic {
       void StatusChange(const char * const );
       void PowerLoss();
       void PowerLossRecovery();
+      void HomingStart();
+      void HomingComplete();
 
       
       typedef void (*p_fun)(void);
@@ -403,8 +443,20 @@ namespace Anycubic {
       static void page170_handle(void);     // ENG Mute handler
       static void page171_handle(void);     // CHS power outage resume handler
       static void page173_handle(void);     // ENG power outage resume handler
-      static void page175_handle(void);     // CHS probe preheating handler
-      static void page176_handle(void);     // ENG probe preheating handler
+      static void page175_handle(void);     // ENG probe preheating handler
+      static void page176_handle(void);     // CHS probe preheating handler
+
+      static void page177_to_198_handle(void);
+//      static void page178_to_181_190_to_193_handle(void);
+      static void page199_to_200_handle(void);
+
+      static void page201_handle(void);
+      static void page202_handle(void);
+      static void page203_handle(void);
+      static void page204_handle(void);
+      static void page205_handle(void);
+      static void page206_handle(void);
+
       static void pop_up_manager(void);
 
       void SendtoTFT(PGM_P);
@@ -426,6 +478,7 @@ namespace Anycubic {
       static void SendColorToTFT(uint32_t color, uint32_t address);
       static void SendReadNumOfTxtToTFT(uint8_t number, uint32_t address);
       static void ChangePageOfTFT(uint32_t page_index);
+      static void FakeChangePageOfTFT(uint32_t page_index);
       static void LcdAudioSet(ExtUI::audio_t audio);
 
     private:

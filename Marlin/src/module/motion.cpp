@@ -1290,7 +1290,7 @@ feedRate_t get_homing_bump_feedrate(const AxisEnum axis) {
 /**
  * Home an individual linear axis
  */
-void do_homing_move(const AxisEnum axis, const float distance, const feedRate_t fr_mm_s=0.0, const bool final_approach=true) {
+uint8_t do_homing_move(const AxisEnum axis, const float distance, const feedRate_t fr_mm_s=0.0, const bool final_approach=true) {
   DEBUG_SECTION(log_move, "do_homing_move", DEBUGGING(LEVELING));
 
   const feedRate_t home_fr_mm_s = fr_mm_s ?: homing_feedrate(axis);
@@ -1363,10 +1363,14 @@ void do_homing_move(const AxisEnum axis, const float distance, const feedRate_t 
       if (axis == Z_AXIS && final_approach) probe.set_probing_paused(false);
     #endif
 
-    endstops.validate_homing_move();
+    if(!endstops.validate_homing_move()) {
+        return false;
+    }
 
     // Re-enable stealthChop if used. Disable diag1 pin on driver.
     TERN_(SENSORLESS_HOMING, end_sensorless_homing_per_axis(axis, stealth_states));
+
+    return true;
   }
 }
 
@@ -1551,7 +1555,6 @@ void set_axis_never_homed(const AxisEnum axis) {
  */
 
 void homeaxis(const AxisEnum axis) {
-
   #if IS_SCARA
     // Only Z homing (with probe) is permitted
     if (axis != Z_AXIS) { BUZZ(100, 880); return; }
@@ -1619,9 +1622,14 @@ void homeaxis(const AxisEnum axis) {
   //
   // Fast move towards endstop until triggered
   //
-  const float move_length = 1.5f * max_length(TERN(DELTA, Z_AXIS, axis)) * axis_home_dir;
+  const float move_length = 1.1f * max_length(TERN(DELTA, Z_AXIS, axis)) * axis_home_dir;
   if (DEBUGGING(LEVELING)) DEBUG_ECHOLNPAIR("Home Fast: ", move_length, "mm");
+
   do_homing_move(axis, move_length, 0.0, !use_probe_bump);
+
+  if(HOMING_FAILED_X == homing_state || HOMING_FAILED_Y == homing_state) {
+    return;
+  }
 
   #if BOTH(HOMING_Z_WITH_PROBE, BLTOUCH_SLOW_MODE)
     if (axis == Z_AXIS) bltouch.stow(); // Intermediate STOW (in LOW SPEED MODE)

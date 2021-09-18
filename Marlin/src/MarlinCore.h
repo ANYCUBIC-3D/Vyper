@@ -72,7 +72,20 @@ enum MarlinState : uint8_t {
   MF_KILLED       = _BV(7)
 };
 
-extern MarlinState marlin_state;
+// Global State of homing
+enum HomingState : uint8_t {
+  NOT_HOMING           = _BV(0),
+  HOMING_X             = _BV(1),
+  HOMING_Y             = _BV(2),
+  HOMING_Z             = _BV(3),
+  HOMING_FAILED_X      = _BV(4),
+  HOMING_FAILED_Y      = _BV(5),
+  HOMING_FAILED_Z      = _BV(6),
+};
+
+extern volatile MarlinState marlin_state;
+extern volatile HomingState homing_state;
+
 inline bool IsRunning() { return marlin_state == MF_RUNNING; }
 inline bool IsStopped() { return marlin_state != MF_RUNNING; }
 

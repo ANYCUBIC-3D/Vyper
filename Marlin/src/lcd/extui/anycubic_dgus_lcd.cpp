@@ -64,8 +64,8 @@ namespace ExtUI {
   void onUserConfirmRequired(const char * const msg) { Dgus.ConfirmationRequest(msg);     }
   void onStatusChanged(const char * const msg)       { Dgus.StatusChange(msg);            }
 
-  void onHomingStart() {}
-  void onHomingComplete() {}
+  void onHomingStart()    { Dgus.HomingStart(); }
+  void onHomingComplete() { Dgus.HomingComplete(); }
   void onPrintFinished() {}
 
   void onFactoryReset() {

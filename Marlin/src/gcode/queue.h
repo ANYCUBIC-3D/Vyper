@@ -69,6 +69,7 @@ public:
    * Clear the Marlin command queue
    */
   static void clear();
+  static void clear_buf();
 
   /**
    * Next Injected Command (PROGMEM) pointer. (nullptr == empty)

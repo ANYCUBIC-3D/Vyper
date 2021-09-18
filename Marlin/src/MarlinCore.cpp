@@ -246,7 +246,8 @@ PGMSTR(SP_A_STR, " A");  PGMSTR(SP_B_STR, " B");  PGMSTR(SP_C_STR, " C");
 PGMSTR(SP_X_STR, " X");  PGMSTR(SP_Y_STR, " Y");  PGMSTR(SP_Z_STR, " Z");  PGMSTR(SP_E_STR, " E");
 PGMSTR(SP_X_LBL, " X:"); PGMSTR(SP_Y_LBL, " Y:"); PGMSTR(SP_Z_LBL, " Z:"); PGMSTR(SP_E_LBL, " E:");
 
-MarlinState marlin_state = MF_INITIALIZING;
+volatile MarlinState marlin_state = MF_INITIALIZING;
+volatile HomingState homing_state = NOT_HOMING;
 
 // For M109 and M190, this flag may be cleared (by M108) to exit the wait loop
 bool wait_for_heatup = true;
@@ -477,7 +478,9 @@ void startOrResumeJob() {
     wait_for_heatup = false;
     TERN_(POWER_LOSS_RECOVERY, recovery.purge());
     #ifdef EVENT_GCODE_SD_ABORT
-      queue.inject_P(PSTR(EVENT_GCODE_SD_ABORT));
+      if(MF_KILLED != marlin_state) {
+        queue.inject_P(PSTR(EVENT_GCODE_SD_ABORT));
+      }
     #endif
 
     TERN_(PASSWORD_AFTER_SD_PRINT_ABORT, password.lock_machine());
@@ -813,7 +816,10 @@ void idle(TERN_(ADVANCED_PAUSE_FEATURE, bool no_stepper_sleep/*=false*/)) {
  * After this the machine will need to be reset.
  */
 void kill(PGM_P const lcd_error/*=nullptr*/, PGM_P const lcd_component/*=nullptr*/, const bool steppers_off/*=false*/) {
+
   thermalManager.disable_all_heaters();
+
+  caselight.off();
 
   TERN_(HAS_CUTTER, cutter.kill()); // Full cutter shutdown including ISR control
 
@@ -834,6 +840,7 @@ void kill(PGM_P const lcd_error/*=nullptr*/, PGM_P const lcd_component/*=nullptr
     host_action_kill();
   #endif
 
+// no freeze the machine
   minkill(steppers_off);
 }
 

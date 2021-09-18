@@ -38,6 +38,7 @@ public:
   #endif
   static bool on;
 
+  static void off();
   static void update(const bool sflag);
   static inline void update_brightness() { update(false); }
   static inline void update_enabled() { update(true); }

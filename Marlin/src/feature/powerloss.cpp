@@ -280,7 +280,7 @@ void PrintJobRecovery::save(const bool force/*=false*/, const float zraise/*=0*/
         return ;
       }
 
-      if(AD_DMA[2] < 2600) {
+      if(AD_DMA[2] < 2300) {
 
 //        SERIAL_ECHOLNPAIR("v:", AD_DMA[2]);
 

@@ -123,6 +123,14 @@ void GCodeQueue::clear() {
   index_r = index_w = length = 0;
 }
 
+void GCodeQueue::clear_buf() {
+  index_r = index_w = length = 0;
+  memset(command_buffer, 0, BUFSIZE * MAX_CMD_SIZE);
+  memset(injected_commands, 0, 64);
+  injected_commands_P = nullptr;
+}
+
+
 /**
  * Once a new command is in the ring buffer, call this to commit it
  */
@@ -197,7 +205,10 @@ bool GCodeQueue::process_injected_command_P() {
   // Execute command if non-blank
   if (i) {
     parser.parse(cmd);
+    SERIAL_ECHOLNPAIR("line: ", __LINE__, " func: ", __FUNCTION__);
     gcode.process_parsed_command();
+  } else {
+    SERIAL_ECHOLNPAIR("line: ", __LINE__, " func: ", __FUNCTION__);
   }
   return true;
 }
@@ -658,23 +669,29 @@ void GCodeQueue::advance() {
       else {
         // Write the string from the read buffer to SD
         card.write_command(command);
-        if (card.flag.logging)
+        if (card.flag.logging) {
           gcode.process_next_command(); // The card is saving because it's logging
-        else
+        } else {
           ok_to_send();
+        }
       }
     }
     else
       gcode.process_next_command();
 
   #else
-
     gcode.process_next_command();
 
   #endif // SDSUPPORT
 
   // The queue may be reset by a command handler or by code invoked by idle() within a handler
-  --length;
-  if (++index_r >= BUFSIZE) index_r = 0;
+
+// When kill called, length = index_r = index_w = 0;
+  if(length) {
+    --length;
+    if (++index_r >= BUFSIZE) index_r = 0;
+  } else { // be sure to keep index_r <= BUFSIZE
+    if (index_r >= BUFSIZE) index_r = 0;
+  }
 
 }

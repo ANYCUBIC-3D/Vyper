@@ -44,6 +44,7 @@
 
 #include "../../inc/MarlinConfig.h"
 #include "../marlinui.h"
+#include "../../module/probe.h"
 
 namespace ExtUI {
 
@@ -239,6 +240,8 @@ namespace ExtUI {
   #if HAS_BED_PROBE
     float getProbeOffset_mm(const axis_t);
     void setProbeOffset_mm(const float, const axis_t);
+    inline bool getProbeState(void) { return PROBE_TRIGGERED(); }
+    void ProbeTare(void);
   #endif
 
   #if ENABLED(BACKLASH_GCODE)
@@ -366,6 +369,8 @@ namespace ExtUI {
   void onUserConfirmRequired_P(PGM_P const pstr);
   void onStatusChanged(const char * const msg);
   void onStatusChanged_P(PGM_P const pstr);
+  void onSurviveInKilled();
+  void onKilledStatusGet();
   void onHomingStart();
   void onHomingComplete();
   void onSteppersDisabled();

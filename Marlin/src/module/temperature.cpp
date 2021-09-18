@@ -337,6 +337,8 @@ const char str_t_thermal_runaway[] PROGMEM = STR_T_THERMAL_RUNAWAY,
   float Temperature::redundant_temperature = 0.0;
 #endif
 
+volatile uint8_t Temperature::killed = 0;
+
 volatile bool Temperature::raw_temps_ready = false;
 
 #if ENABLED(PID_EXTRUSION_SCALING)
@@ -790,10 +792,12 @@ int16_t Temperature::getHeaterPower(const heater_id_t heater_id) {
 // Temperature Error Handlers
 //
 
-inline void loud_kill(PGM_P const lcd_msg, const heater_id_t heater_id) {
+inline void loud_kill(PGM_P const lcd_msg, const heater_id_t heater_id)
+{
   marlin_state = MF_KILLED;
   #if USE_BEEPER
-    thermalManager.disable_all_heaters();
+#if 0
+//    thermalManager.disable_all_heaters();
     for (uint8_t i = 20; i--;) {
       WRITE(BEEPER_PIN, HIGH);
       delay(25);
@@ -804,14 +808,23 @@ inline void loud_kill(PGM_P const lcd_msg, const heater_id_t heater_id) {
       delay(40);
       watchdog_refresh();
     }
-    WRITE(BEEPER_PIN, HIGH);
+    WRITE(BEEPER_PIN, LOW);
+#endif
+
+  watchdog_refresh();
+  TERN_(USE_BEEPER, buzzer.tone(300, 1000));
+  watchdog_refresh();
+  TERN_(USE_BEEPER, buzzer.tone(300, 1000));
+  watchdog_refresh();
+
   #endif
+
   kill(lcd_msg, HEATER_PSTR(heater_id));
 }
 
 void Temperature::_temp_error(const heater_id_t heater_id, PGM_P const serial_msg, PGM_P const lcd_msg) {
 
-  static uint8_t killed = 0;
+//  static uint8_t killed = 0;
 
   if (IsRunning() && TERN1(BOGUS_TEMPERATURE_GRACE_PERIOD, killed == 2)) {
     SERIAL_ERROR_START();
@@ -826,7 +839,7 @@ void Temperature::_temp_error(const heater_id_t heater_id, PGM_P const serial_ms
     SERIAL_EOL();
   }
 
-  disable_all_heaters(); // always disable (even for bogus temp)
+//  disable_all_heaters(); // always disable (even for bogus temp)
   watchdog_refresh();
 
   #if BOGUS_TEMPERATURE_GRACE_PERIOD
@@ -856,6 +869,11 @@ void Temperature::max_temp_error(const heater_id_t heater_id) {
   #if ENABLED(DWIN_CREALITY_LCD) && (HAS_HOTEND || HAS_HEATED_BED)
     DWIN_Popup_Temperature(1);
   #endif
+
+  if(millis() < 3000) {
+    return ;
+  }
+
   _temp_error(heater_id, PSTR(STR_T_MAXTEMP), GET_TEXT(MSG_ERR_MAXTEMP));
 }
 

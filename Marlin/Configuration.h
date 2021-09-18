@@ -1486,8 +1486,8 @@
 
 // Manually set the home position. Leave these undefined for automatic settings.
 // For DELTA this is the top-center of the Cartesian print volume.
-#define MANUAL_X_HOME_POS -0.2
-#define MANUAL_Y_HOME_POS -5.7
+#define MANUAL_X_HOME_POS +0.5
+#define MANUAL_Y_HOME_POS -4.2
 #define MANUAL_Z_HOME_POS -4
 
 // Use "Z Safe Homing" to avoid homing with a Z probe outside the bed area.

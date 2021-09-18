@@ -206,6 +206,9 @@
  *  Z   Home to the Z endstop
  */
 void GcodeSuite::G28() {
+
+  homing_state = NOT_HOMING;
+
   DEBUG_SECTION(log_G28, "G28", DEBUGGING(LEVELING));
   if (DEBUGGING(LEVELING)) log_machine_info();
 
@@ -367,14 +370,27 @@ void GcodeSuite::G28() {
 
       #else
 
+        homing_state = HOMING_X;
         homeaxis(X_AXIS);
+        if(HOMING_FAILED_X == homing_state) {
+          return ;
+        }
 
       #endif
     }
 
     // Home Y (after X)
-    if (DISABLED(HOME_Y_BEFORE_X) && doY)
-      homeaxis(Y_AXIS);
+    if (DISABLED(HOME_Y_BEFORE_X) && doY) {
+      if(HOMING_FAILED_X != homing_state) {
+        homing_state = HOMING_Y;
+        homeaxis(Y_AXIS);
+        if(HOMING_FAILED_Y == homing_state) {
+          return ;
+        }
+      } else {
+        return ;
+      }
+    }
 
     TERN_(IMPROVE_HOMING_RELIABILITY, end_slow_homing(slow_homing));
 
@@ -387,7 +403,20 @@ void GcodeSuite::G28() {
         #endif
 
         TERN_(BLTOUCH, bltouch.init());
-        TERN(Z_SAFE_HOMING, home_z_safely(), homeaxis(Z_AXIS));
+//        TERN(Z_SAFE_HOMING, home_z_safely(), homeaxis(Z_AXIS));
+    #if ENABLED(Z_SAFE_HOMING)
+        home_z_safely();
+    #else
+        if(HOMING_FAILED_X != homing_state && HOMING_FAILED_Y != homing_state) {
+          homing_state = HOMING_Z;
+          homeaxis(Z_AXIS);
+          if(HOMING_FAILED_Z == homing_state) {
+            return ;
+          }
+        } else {
+          return ;
+        }
+    #endif
         probe.move_z_after_homing();
       }
     #endif

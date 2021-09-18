@@ -102,7 +102,7 @@
 
 namespace ExtUI {
   static struct {
-    uint8_t printer_killed : 1;
+    volatile uint8_t printer_killed : 1;
     TERN_(JOYSTICK, uint8_t jogging : 1);
     TERN_(SDSUPPORT, uint8_t was_sd_printing : 1);
   } flags;
@@ -791,6 +791,14 @@ namespace ExtUI {
     void setProbeOffset_mm(const float val, const axis_t axis) {
       probe.offset.pos[axis] = val;
     }
+
+    void ProbeTare(void)
+    {
+      OUT_WRITE(AUTO_LEVEL_TX_PIN, LOW);
+      delay(300);
+      OUT_WRITE(AUTO_LEVEL_TX_PIN, HIGH);
+      delay(100);
+    }
   #endif
 
   #if ENABLED(BACKLASH_GCODE)
@@ -999,6 +1007,21 @@ namespace ExtUI {
     onStatusChanged(msg);
   }
 
+  void onSurviveInKilled()
+  {
+    thermalManager.killed = 0;
+    flags.printer_killed = 0;
+    marlin_state = MF_RUNNING;
+//    SERIAL_ECHOLNPAIR("survived at: ", millis());
+  }
+
+  void onKilledStatusGet()
+  {
+    SERIAL_ECHOLNPAIR("thermalManager.killed: ", thermalManager.killed);
+    SERIAL_ECHOLNPAIR("flags.printer_killed: ", flags.printer_killed);
+    SERIAL_ECHOLNPAIR("marlin_state: ", marlin_state);
+  }
+
   FileList::FileList() { refresh(); }
 
   void FileList::refresh() { num_files = 0xFFFF; }
@@ -1066,10 +1089,14 @@ void MarlinUI::update() { ExtUI::onIdle(); }
 
 void MarlinUI::kill_screen(PGM_P const error, PGM_P const component) {
   using namespace ExtUI;
+  SERIAL_ECHOLNPAIR("flags.printer_killed: ", flags.printer_killed);
   if (!flags.printer_killed) {
     flags.printer_killed = true;
     onPrinterKilled(error, component);
   }
 }
+
+
+
 
 #endif // EXTENSIBLE_UI
